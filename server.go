@@ -2,14 +2,17 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/duo-labs/webauthn.io/session"
 	"github.com/duo-labs/webauthn/protocol"
 	"github.com/duo-labs/webauthn/webauthn"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
@@ -18,13 +21,20 @@ var userDB *userdb
 var sessionStore *session.Store
 
 func main() {
+	rpName := flag.String("rpname", "Foobar Corp.", "Display Name for your site")
+	rpid := flag.String("rpid", "localhost", "the domain name for your site")
+	rpOrigin := flag.String("rporigin", "http://localhost", "The origin URL for WebAuthn requests")
+	rpIcon := flag.String("rpIcon", "", "Optional icon URL for your site")
+	serverAddress := flag.String("listen", ":8080", "Listen address")
+
+	flag.Parse()
 
 	var err error
 	webAuthn, err = webauthn.New(&webauthn.Config{
-		RPDisplayName: "Foobar Corp.",     // Display Name for your site
-		RPID:          "localhost",        // Generally the domain name for your site
-		RPOrigin:      "http://localhost", // The origin URL for WebAuthn requests
-		// RPIcon: "https://duo.com/logo.png", // Optional icon URL for your site
+		RPDisplayName: *rpName,   // Display Name for your site
+		RPID:          *rpid,     // Generally the domain name for your site
+		RPOrigin:      *rpOrigin, // The origin URL for WebAuthn requests
+		RPIcon:        *rpIcon,   // Optional icon URL for your site
 	})
 
 	if err != nil {
@@ -47,9 +57,8 @@ func main() {
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./")))
 
-	serverAddress := ":8080"
-	log.Println("starting server at", serverAddress)
-	log.Fatal(http.ListenAndServe(serverAddress, r))
+	log.Println("starting server at", *serverAddress)
+	log.Fatal(http.ListenAndServe(*serverAddress, handlers.LoggingHandler(os.Stderr, r)))
 }
 
 func BeginRegistration(w http.ResponseWriter, r *http.Request) {
